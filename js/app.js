@@ -22,9 +22,8 @@ if (hasMap) { $("mapStyle").value = savedStyle; setMapStyle(savedStyle); $("mapS
 /* 3D libraries (three.js is ~600 KB) are fetched AFTER the app is on screen, so the first load is much lighter */
 function loadScript(src) { return new Promise((ok, fail) => { const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = fail; document.head.appendChild(s); }); }
 function loadThree() {
-  if (typeof THREE !== "undefined" && THREE.GLTFLoader) return Promise.resolve();
-  return loadScript("https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js")
-    .then(() => loadScript("https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"));
+  if (typeof THREE !== "undefined") return Promise.resolve();
+  return loadScript("https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js");   // the cube needs no GLTFLoader or .glb file
 }
 const start3d = () => loadThree().then(initPokestopOverlay).catch(() => { try { toast(tx("lib3d")); } catch (e) {} });
 if (document.readyState === "complete") setTimeout(start3d, 0); else addEventListener("load", () => setTimeout(start3d, 0));
