@@ -44,6 +44,8 @@ button{font-family:inherit}
 /* top HUD */
 .topbar{position:absolute;top:0;left:0;right:0;z-index:1100;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:calc(10px + env(safe-area-inset-top,0px)) 10px 0;pointer-events:none}
 .topbar>*{pointer-events:auto}
+.map-notice{position:absolute;top:calc(64px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:1101;display:flex;align-items:center;gap:12px;max-width:calc(100% - 24px);padding:9px 12px 9px 16px;background:var(--card);backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:999px;box-shadow:0 8px 24px rgba(0,0,0,.35);font-size:.85rem;font-weight:800;white-space:nowrap}
+.map-notice button{border:0;border-radius:999px;padding:8px 12px;background:var(--blue);color:#fff;font:inherit;font-weight:900;cursor:pointer}
 .trainer{display:flex;align-items:center;gap:10px;background:rgba(11,19,30,.88);backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:999px;padding:5px 14px 5px 5px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
 .avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#ff2a6d,#ffea00);display:grid;place-items:center;font-size:1.3rem;border:2px solid #fff;box-shadow:0 0 12px rgba(255,42,109,.6)}
 .tname{font-weight:900;font-size:.85rem;letter-spacing:.04em;color:var(--blue);text-transform:uppercase}
@@ -134,6 +136,7 @@ select.sel{background:rgba(18,28,45,.92);color:#fff;border:1px solid var(--line)
   .sheet-title b{font-size:1.25rem}
   .sheet-body{padding:6px 18px 28px}
   .topbar{left:var(--pw)}
+  .map-notice{left:calc(50% + 215px)}
   .stopcard,.toast{left:calc(50% + var(--pw) / 2)}
   .leaflet-bottom{bottom:0}
   .leaflet-control-zoom{margin-top:90px!important}
