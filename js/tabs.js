@@ -10,7 +10,7 @@ function setTab(t) {
   $("sheetTitle").textContent = tx("title_" + t);
   $("sheet").classList.remove("peek"); $("sheet").classList.toggle("tall3d", t === "3d");
   $("sheetHint").textContent = tx("hide_panel");
-  if (t === "3d") { setMapTilt($("mapTilt").value); track("open_3d_view"); } else setMapTilt(tipStopId && window._mapKey === "digi" ? (+$("mapTilt").value || DIGI_TILT) : 0);
+  if (t === "3d") { setMapTilt($("mapTilt").value); track("open_3d_view"); } else setMapTilt(window._mapKey === "digi" ? $("mapTilt").value : 0);
   updatePokestopStyle();
   if (t === "routes") renderRoutes();
   if (t === "plan" && !$("timeIn").value) $("timeIn").value = Bus.fmt(nowMin());
