@@ -1,7 +1,9 @@
 /* app.js — Tilt, map style, settings, language, schedule download, lazy-loading of the 3D library */
 /* ---------- 3D map tilt ---------- */
 function setMapTilt(value) {
-  const tilt = Math.max(0, Math.min(60, Number(value) || 0));
+  const minTilt = window._mapKey === "digi" ? 5 : 0;
+  const tilt = Math.max(minTilt, Math.min(60, Number(value) || 0));
+  $("mapTilt").value = tilt;
   $("map").style.setProperty("--map-tilt", tilt + "deg");
   $("map").classList.toggle("map-tilted", tilt > 0);
   $("tiltValue").textContent = tilt + "°";
