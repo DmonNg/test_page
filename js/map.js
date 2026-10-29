@@ -54,7 +54,7 @@ function applyTod() {
 setInterval(applyTod, 30000);
 
 /* ---------- Map ---------- */
-const DIGI_TILT = 35;
+const DIGI_TILT = 35; // Adjust this angle (degrees) for DigiWorld's default tilt.
 const hasMap = typeof L !== "undefined";
 let map, layerRoutes, layerStops, layerJ, layerArrows;
 let visibleStopIds = [];
@@ -79,7 +79,7 @@ if (hasMap) {
 }
 /* Suggested wait spot (KRP_G11): pulsing ring + label on the map, and a bigger glowing 3D model in DigiWorld */
 let tipStopId = null, layerTip = null, tipPrevTilt = null, tip3dHinted = false;
-console.info("MyRoad build: krp-tip-3d v4 (split files)");
+
 function setTipStop(id) {
   const old = tipStopId; tipStopId = id || null;
   if (!hasMap) return;
@@ -130,7 +130,11 @@ function schedulePokestopRender() {
         state.scene.add(root); state.instances.set(id, root);
       }
       const point = map.latLngToContainerPoint([place.lat, place.lng]);
-      root.position.set(point.x - size.x / 2, size.y / 2 - point.y - state.modelMinY * root.scale.x, 0);
+      /* the canvas is tilted with the map and squashes everything vertically by cos(tilt); stretch by 1/cos so the cube stands upright */
+      const tiltDeg = $("map").classList.contains("map-tilted") ? Math.min(60, +$("mapTilt").value || 0) : 0;
+      const sc = state.modelScale * (id === tipStopId ? 1.5 : 1);
+      root.scale.set(sc, sc / Math.cos(tiltDeg * Math.PI / 180), sc);
+      root.position.set(point.x - size.x / 2, size.y / 2 - point.y - state.modelMinY * sc, 0);
       root.visible = window._mapKey === "digi" && point.x > -80 && point.x < size.x + 80 && point.y > -80 && point.y < size.y + 80;
     }
     state.renderer.render(state.scene, state.camera);
@@ -138,7 +142,7 @@ function schedulePokestopRender() {
 }
 function updatePokestopStyle() {
   const state = pokestopOverlay;
-  const ready = window._mapKey === "digi" && (tab === "3d" || !!tipStopId) && !!state.model;
+  const ready = window._mapKey === "digi" && !!state.model;
   $("map").classList.toggle("pokestop-models-ready", ready);
   schedulePokestopRender();
 }
@@ -152,8 +156,25 @@ function resizePokestopOverlay() {
   state.camera.top = size.y / 2; state.camera.bottom = -size.y / 2;
   state.camera.updateProjectionMatrix(); schedulePokestopRender();
 }
+/* 3D cube that replaces the stop pin in DigiWorld.
+   The overlay camera is orthographic and looks straight at the screen, so an un-rotated cube shows only ONE face
+   (a flat square). The inner pivot is turned 45 deg around Y and tipped toward the viewer, so the top and two sides show.
+   Its lowest corner sits on y = 0 (the stop's position on the map). */
+function makeStopCube() {
+  const root = new THREE.Group(), pivot = new THREE.Group();
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1),
+    new THREE.MeshStandardMaterial({ color: 0x1558d6, roughness: 0.35, metalness: 0.1, emissive: 0x0b2f7a, emissiveIntensity: 0.35 }));
+  const edges = new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry), new THREE.LineBasicMaterial({ color: 0xffffff }));
+  pivot.add(mesh, edges);
+  pivot.rotation.set(0.5, Math.PI / 4, 0);          // pitch 0.5 rad, yaw 45 deg
+  pivot.position.y = 0.8;                           // half the rotated height, so the lowest corner touches the ground
+  const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.6, 24), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28 }));
+  shadow.scale.set(1.2, 0.45, 1); shadow.position.z = -1;
+  root.add(shadow, pivot);
+  return root;
+}
 function initPokestopOverlay() {
-  if (!hasMap || typeof THREE === "undefined" || !THREE.GLTFLoader) return;
+  if (!hasMap || typeof THREE === "undefined") return;
   const state = pokestopOverlay, container = $("map"), size = map.getSize();
   const canvas = document.createElement("canvas"); canvas.className = "pokestop-overlay"; container.appendChild(canvas);
   try {
@@ -167,11 +188,8 @@ function initPokestopOverlay() {
     resizePokestopOverlay();
   } catch (e) { canvas.remove(); state.renderer = null; return; }
   map.on("move zoom resize", schedulePokestopRender);
-  new THREE.GLTFLoader().load("Model/pokestop_bedrock_model.glb", gltf => {
-    const bounds = new THREE.Box3().setFromObject(gltf.scene), dimensions = bounds.getSize(new THREE.Vector3());
-    state.model = gltf.scene; state.modelMinY = bounds.min.y; state.modelScale = 44 / (dimensions.y || 1);
-    updatePokestopStyle();
-  }, undefined, () => { canvas.remove(); state.renderer.dispose(); state.renderer = null; });
+  state.model = makeStopCube(); state.modelMinY = 0; state.modelScale = 26;   // cube is 1 unit; 26 px wide on screen
+  updatePokestopStyle();
 }
 async function roadRoute(legs) {
   const line = [];
