@@ -36,6 +36,18 @@ function routeTipHtml(b, di, running, now) {
     + (chips ? `<div class="sub muted">${tx("tip_passes", { b: esc(b.code), s: kn })}</div><div class="chips">${chips}</div>` : "")
     + `<button class="mini" id="tipMap" style="align-self:flex-start;margin-top:6px">${tx("tip_show_map")}</button></div>`;
 }
+let mapPreviewPreviousPeek;
+function showMapPreview() {
+  if (mapPreviewPreviousPeek === undefined) mapPreviewPreviousPeek = $("sheet").classList.contains("peek");
+  $("mapNotice").classList.remove("hide");
+  peek();
+}
+$("mapReturn").onclick = () => {
+  if (mapPreviewPreviousPeek !== undefined) $("sheet").classList.toggle("peek", mapPreviewPreviousPeek);
+  mapPreviewPreviousPeek = undefined;
+  $("mapNotice").classList.add("hide");
+  $("sheetHint").textContent = tx($("sheet").classList.contains("peek") ? "show_panel" : "hide_panel");
+};
 function renderRoutes() {
   const di = dayInfo();
   $("rlist").innerHTML = buses.map(b => `<button class="rbtn ${b.code === cur.route ? "on" : ""}" style="--c:${colorOf[b.code] || "#00e5ff"};${busActive(b, di) ? "" : "opacity:.45"}" data-r="${esc(b.code)}">${esc(b.code)}</button>`).join("");
@@ -46,7 +58,7 @@ function renderRoutes() {
     <div class="muted" style="margin:6px 0">${esc(b.via)}</div>
     <span class="badge">${I18N.en["d_" + b.day] ? tx("d_" + b.day) : b.day}</span>${b.friday ? `<span class="badge red">${tx("fri_no", { w: esc(b.friday.join("–")) })}</span>` : ""}${running ? "" : `<span class="badge red">${tx("not_running")}</span>`}
     <div><button class="mini" id="seeMap" style="margin-top:6px">${tx("show_on_map")}</button></div>`;
-  $("seeMap").onclick = () => { selectRoute(b.code, false); peek(); mapPadFit(rlines[b.code].line.getLatLngs()); };
+  $("seeMap").onclick = () => { selectRoute(b.code, false); showMapPreview(); mapPadFit(rlines[b.code].line.getLatLngs()); };
   $("routeMeta").textContent = tx("route_meta", { a: Object.keys(b.from).length, b: timeline(b).ids.length });
   let html = routeTipHtml(b, di, running, now);
   for (const k of Object.keys(b.from).sort()) {
@@ -68,7 +80,7 @@ function renderRoutes() {
   $("times").innerHTML = html;
   const tm = $("tipMap");
   if (tm) tm.onclick = () => {
-    selectRoute(b.code, false); setTipStop(KRP_ID); peek();
+    selectRoute(b.code, false); setTipStop(KRP_ID); showMapPreview();
     if (hasMap) { L.polyline([stopLL(CP_ID), stopLL(KRP_ID)], { color: "#0d2b5e", weight: 4, dashArray: "2 8", opacity: 0.95 }).addTo(layerJ); mapPadFit([stopLL(CP_ID), stopLL(KRP_ID), stopLL(routeTipInfo(b).x)]); }
   };
 }
