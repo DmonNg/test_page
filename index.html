@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-QHZVRPJQYV"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-QHZVRPJQYV');
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1558d6">
+<title>UTM Shuttle GO – Transit Companion</title>
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+<link rel="preconnect" href="https://raw.githubusercontent.com" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="css/styles.css?v4">
+
+</head>
+<body>
+
+<div id="loader">
+  <div class="basu-running-sprite" role="img" aria-label="Loading"></div>
+  <div style="font-weight:900;font-size:1.5rem;color:var(--blue);letter-spacing:.04em">UTM SHUTTLE GO</div>
+  <div class="lbar"><i id="ldBar"></i></div>
+  <div id="ldMsg" class="muted" style="font-size:.95rem;font-weight:700">Loading bus schedule…</div>
+  <div class="muted" id="ldPct">0%</div>
+  <button class="mini hide" id="ldSkip" data-i18n="skip">Skip and open now</button>
+</div>
+<div id="map"></div>
+
+
+<!-- Top HUD -->
+<div class="topbar">
+  <div class="trainer">
+    <div class="avatar"><img alt="" src="assets/img/trainer-avatar.jpg"></div>
+    <div><div class="tname" data-i18n="trainer">UTM Explorer</div><div class="tsub" id="clock">--:--</div></div>
+  </div>
+  <div class="right">
+    <button class="gear" id="gearBtn" aria-label="Settings">⚙️<i class="gdot" id="gdot"></i></button>
+    <div class="settings hide" id="settings">
+      <div style="display:flex;justify-content:space-between;align-items:center"><b data-i18n="set_title" style="color:var(--blue)">Settings</b><button class="swap" id="setClose" style="width:34px;height:34px;font-size:1rem">✕</button></div>
+      <div class="field"><label data-i18n="lbl_lang">LANGUAGE</label><select id="langSel" class="sel" aria-label="Language"><option value="en">English</option><option value="zh">中文</option><option value="ms">Bahasa Melayu</option></select></div>
+      <div class="field"><label data-i18n="lbl_day">DAY</label><select id="daySel" class="sel" aria-label="Day">
+        <option value="" data-i18n="today">Today</option><option value="1" data-i18n="mon">Mon</option><option value="2" data-i18n="tue">Tue</option>
+        <option value="3" data-i18n="wed">Wed</option><option value="4" data-i18n="thu">Thu</option><option value="5" data-i18n="fri">Fri</option>
+        <option value="6" data-i18n="sat">Sat</option><option value="0" data-i18n="sun">Sun</option>
+      </select></div>
+      <div class="field"><label data-i18n="lbl_map">MAP STYLE</label><select id="mapStyle" class="sel" aria-label="Map style"><option value="digi" data-i18n="map_digi">✨ DigiWorld map</option><option value="normal" data-i18n="map_normal">🗺 Normal map</option><option value="sat" data-i18n="map_sat">🛰 Satellite</option></select></div>
+      <div class="field"><label data-i18n="lbl_tod">TIME OF DAY</label><select id="todSel" class="sel" aria-label="Time of day"><option value="auto" data-i18n="tod_auto">Auto (real time)</option><option value="day" data-i18n="tod_day">☀️ Day</option><option value="dusk" data-i18n="tod_dusk">🌅 Dusk</option><option value="night" data-i18n="tod_night">🌙 Night</option></select></div>
+      <div class="pill" id="gpsPill" style="align-self:flex-start">GPS OFF</div>
+      <div class="muted" id="buildTag" style="align-self:flex-start">build: krp-tip-3d v4 (split files)</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Sheet -->
+<div class="sheet" id="sheet">
+  <div class="handle" id="handle" data-i18n-title="handle_title" title="Tap to expand / collapse"><i></i></div>
+  <div class="sheet-title"><b id="sheetTitle">Plan a trip</b><span id="sheetHint">▼ Hide panel</span></div>
+
+  <div class="sheet-body">
+    <!-- load file fallback -->
+    <div class="card hide" id="pick">
+      <b style="color:var(--yellow)" data-i18n="pick_title">Load schedule file</b>
+      <p class="muted" style="margin:4px 0 8px" data-i18n="pick_desc">Could not download the schedule. Choose your local bus_schedule.txt</p>
+      <input type="file" id="file" accept=".txt,text/plain">
+    </div>
+
+    <!-- PLAN -->
+    <div id="p-plan">
+      <div class="card hide" id="framedNote" style="margin-bottom:10px;gap:10px;align-items:center;justify-content:space-between">
+        <span class="muted" style="color:var(--yellow)" data-i18n="framed_note">GPS doesn't work inside Google Sites.</span>
+        <button class="mini" id="openFull" data-i18n="open_full">Open full page</button>
+      </div>
+      <div class="card" style="display:flex;flex-direction:column;gap:10px">
+        <div class="row">
+          <div class="field"><label data-i18n="lbl_from">FROM</label><input id="fromIn" list="placeList" data-i18n-ph="ph_from" placeholder="Where are you?" autocomplete="off"></div>
+          <button class="swap" id="swapBtn" data-i18n-title="swap" title="Swap">⇅</button>
+        </div>
+        <div class="field"><label data-i18n="lbl_to">TO</label><input id="toIn" list="placeList" data-i18n-ph="ph_to" placeholder="Where are you going?" autocomplete="off"></div>
+        <div class="qchips" id="quick"></div>
+        <div class="row">
+          <div class="field"><label data-i18n="lbl_leave">LEAVE AFTER</label><input id="timeIn" type="time"></div>
+          <button class="mini" id="useLoc" style="height:46px" data-i18n="my_loc">📍 My location</button>
+          <button class="mini" id="pickBtn" style="height:46px" data-i18n="pin_target">🎯 Pin target</button>
+        </div>
+        <button class="btn" id="goBtn" data-i18n="suggest">Suggest best route</button>
+        <datalist id="placeList"></datalist>
+      </div>
+      <div id="tripOut" style="display:flex;flex-direction:column;gap:10px;margin-top:12px"></div>
+    </div>
+
+    <!-- ROUTES -->
+    <div id="p-routes" class="hide">
+      <div class="rlist" id="rlist"></div>
+      <div class="card" style="margin-top:8px">
+        <div id="info"></div>
+        <div class="muted" id="routeMeta" style="margin-top:6px"></div>
+      </div>
+      <div id="times" style="display:flex;flex-direction:column;gap:10px;margin-top:10px"></div>
+    </div>
+
+    <!-- 3D map view -->
+    <div id="p-3d" class="hide">
+      <div class="field">
+        <label for="mapTilt" data-i18n="lbl_tilt">MAP TILT</label>
+        <input id="mapTilt" type="range" min="0" max="60" step="5" value="35" aria-describedby="tiltHint">
+      </div>
+      <div class="row" style="justify-content:space-between;align-items:center;margin-top:10px">
+        <span class="muted" id="tiltHint" data-i18n="tilt_hint">Adjust the angle to look across the map.</span>
+        <b id="tiltValue" class="tag">35°</b>
+      </div>
+      <button class="mini" id="resetTilt" style="margin-top:10px" data-i18n="reset_tilt">↺ Reset tilt</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- Tab bar -->
+<nav class="tabbar">
+  <button class="tab on" data-tab="plan"><span class="ic">🔎</span><span data-i18n="tab_plan">Plan</span></button>
+  <button class="tab" data-tab="routes"><span class="ic">🚌</span><span data-i18n="tab_routes">Routes</span></button>
+<!---  <button class="tab" data-tab="3d"><span class="ic">🗺️</span><span data-i18n="tab_3d">3D View</span></button> -->
+  <button class="tab" data-tab="near"><span class="ic">🐾</span><span data-i18n="tab_near">Nearby</span></button>
+</nav>
+
+<!-- Stop popup -->
+<div class="stopcard hide" id="stopCard">
+  <div class="disc"><img alt="" src="assets/img/stop-disc.jpg"></div>
+  <h2 id="stopTitle" style="color:var(--blue);font-size:1.3rem">Bus stop</h2>
+  <p id="stopDesc" class="muted"></p>
+  <div class="tip hide" id="stopTip" style="width:100%"></div>
+  <div id="stopBuses" style="width:100%"></div>
+  <div class="row" style="width:100%">
+    <button class="btn" id="stopFrom" style="flex:1;padding:11px" data-i18n="from_here">From here</button>
+    <button class="btn" id="stopTo" style="flex:1;padding:11px;background:linear-gradient(135deg,var(--green),#00c853)" data-i18n="to_here">To here</button>
+  </div>
+  <button class="btn ghost" id="stopClose" style="width:100%;padding:11px" data-i18n="close">Close</button>
+</div>
+<div class="toast hide" id="toast"></div>
+
+
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script defer src="js/schedule.js?v4"></script>
+<script defer src="js/i18n.js?v4"></script>
+<script defer src="js/map.js?v4"></script>
+<script defer src="js/tabs.js?v4"></script>
+<script defer src="js/routes-tab.js?v4"></script>
+<script defer src="js/plan.js?v4"></script>
+<script defer src="js/stops-gps.js?v4"></script>
+<script defer src="js/app.js?v4"></script>
+</body>
+</html>
