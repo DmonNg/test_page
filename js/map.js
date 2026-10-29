@@ -106,12 +106,24 @@ function schedulePokestopRender() {
   const state = pokestopOverlay;
   if (!state.renderer || !state.model || state.queued || !map) return;
   state.queued = true;
-  requestAnimationFrame(() => {
-    state.queued = false;
+  requestAnimationFrame(() => { state.queued = false; renderPokestops(); });
+}
+/* Where a stop is on screen. During Leaflet's zoom animation the map is still at the OLD zoom (markers slide by CSS),
+   so blend from the old position to the position at the target zoom with the same ease-out as Leaflet. */
+function stopPoint(place) {
+  const a = pokestopOverlay.anim, ll = [place.lat, place.lng], p0 = map.latLngToContainerPoint(ll);
+  if (!a) return p0;
+  const t = Math.min(1, (performance.now() - a.t0) / a.dur), e = 1 - Math.pow(1 - t, 3);
+  const p1 = map.project(ll, a.zoom).subtract(a.centerPx).add(a.half);
+  return L.point(p0.x + (p1.x - p0.x) * e, p0.y + (p1.y - p0.y) * e);
+}
+function renderPokestops() {
+  const state = pokestopOverlay;
+  {
     if (!state.renderer || !state.model) return;
     const size = map.getSize(), keep = new Set(visibleStopIds);
-    const paneOffset = map.layerPointToContainerPoint(L.point(0, 0));
-    state.renderer.domElement.style.setProperty("--pokestop-tilt-origin", `${size.x / 2 + paneOffset.x}px ${size.y * 0.65 + paneOffset.y}px`);
+    /* the map tilts around a FIXED point of the container (the pan is applied before the tilt), so the canvas must tilt around the same fixed point */
+    state.renderer.domElement.style.setProperty("--pokestop-tilt-origin", `${size.x / 2}px ${size.y * 0.65}px`);
     for (const [id, root] of state.instances) {
       if (!keep.has(id)) { state.scene.remove(root); state.instances.delete(id); }
     }
@@ -129,7 +141,7 @@ function schedulePokestopRender() {
         });
         state.scene.add(root); state.instances.set(id, root);
       }
-      const point = map.latLngToContainerPoint([place.lat, place.lng]);
+      const point = stopPoint(place);
       /* the canvas is tilted with the map and squashes everything vertically by cos(tilt); stretch by 1/cos so the cube stands upright */
       const tiltDeg = $("map").classList.contains("map-tilted") ? Math.min(60, +$("mapTilt").value || 0) : 0;
       const sc = state.modelScale * (id === tipStopId ? 1.5 : 1);
@@ -138,7 +150,7 @@ function schedulePokestopRender() {
       root.visible = window._mapKey === "digi" && point.x > -80 && point.x < size.x + 80 && point.y > -80 && point.y < size.y + 80;
     }
     state.renderer.render(state.scene, state.camera);
-  });
+  }
 }
 function updatePokestopStyle() {
   const state = pokestopOverlay;
@@ -187,7 +199,12 @@ function initPokestopOverlay() {
     state.camera.position.set(0, 0, 1000); state.camera.lookAt(0, 0, 0);
     resizePokestopOverlay();
   } catch (e) { canvas.remove(); state.renderer = null; return; }
-  map.on("move zoom resize", schedulePokestopRender);
+  map.on("move zoom viewreset resize", renderPokestops);          // draw in the same frame as the map moves, no 1-frame lag
+  map.on("zoomanim", e => {                                          // animated zoom: follow the markers while they slide
+    state.anim = { t0: performance.now(), dur: 250, zoom: e.zoom, centerPx: map.project(e.center, e.zoom), half: map.getSize().divideBy(2) };
+    (function tick() { if (!state.anim) return; renderPokestops(); if (performance.now() - state.anim.t0 < state.anim.dur + 80) requestAnimationFrame(tick); })();
+  });
+  map.on("zoomend", () => { state.anim = null; renderPokestops(); });
   state.model = makeStopCube(); state.modelMinY = 0; state.modelScale = 26;   // cube is 1 unit; 26 px wide on screen
   updatePokestopStyle();
 }
