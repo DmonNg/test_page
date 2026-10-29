@@ -30,6 +30,14 @@
   <button class="mini hide" id="ldSkip" data-i18n="skip">Skip and open now</button>
 </div>
 <div id="map"></div>
+<script>
+  try {
+    const initialMapStyle = localStorage.getItem("mapStyle") || "digi";
+    const initialDigiMode = initialMapStyle === "digi" || initialMapStyle === "poke";
+    document.getElementById("map").classList.toggle("map-tilted", initialDigiMode);
+    document.getElementById("map").classList.toggle("digi", initialDigiMode);
+  } catch (e) {}
+</script>
 
 
 <!-- Top HUD -->
